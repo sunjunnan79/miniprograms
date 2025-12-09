@@ -6,6 +6,7 @@ import (
 	"MiniPrograms/responsity/conf"
 	"MiniPrograms/responsity/dao"
 	"MiniPrograms/responsity/model"
+	"MiniPrograms/tools"
 	"fmt"
 	"log"
 	"net/http"
@@ -53,18 +54,32 @@ func main() {
 
 // 读取配置文件
 func initConfig() error {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./config")
-
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("读取配置文件失败: %v", err)
-	}
-
-	err := viper.Unmarshal(&config)
+	//从nacos中获取
+	err := tools.GetConfigFromNacos(&config)
 	if err != nil {
-		log.Fatalf("")
-		return err
+		log.Printf("从nacos中获取失败:%v", err)
+		//兜底从本地获取
+		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath("./config")
+
+		if err = viper.ReadInConfig(); err != nil {
+			log.Fatalf("读取配置文件失败: %v", err)
+		}
+		err = viper.ReadInConfig()
+		if err != nil {
+			log.Printf("无法读取本地配置文件:%v", err)
+			return err
+		}
+
+		err = viper.Unmarshal(&config)
+		if err != nil {
+			log.Printf("解析本地配置文件失败：%v", err)
+			return err
+		}
+		//如果解析成功就直接返回
+		return nil
+
 	}
 
 	return nil
