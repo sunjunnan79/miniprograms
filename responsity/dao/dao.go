@@ -10,7 +10,8 @@ import (
 )
 
 type MiniProgramsDAO struct {
-	db *gorm.DB
+	db    *gorm.DB
+	table string
 }
 
 // 初始化 SQLite 数据库连接
@@ -29,20 +30,20 @@ func InitDB(conf *conf.Config) (*gorm.DB, error) {
 }
 
 // 创建一个新的 MiniPrograms 实例
-func NewMiniProgramsDAO(db *gorm.DB) *MiniProgramsDAO {
-	return &MiniProgramsDAO{db: db}
+func NewMiniProgramsDAO(db *gorm.DB, table string) *MiniProgramsDAO {
+	return &MiniProgramsDAO{db: db, table: table}
 }
 
 // 添加table变量，两个接口操作两个表
-func (d *MiniProgramsDAO) Find(name string, table string) (*model.MiniPrograms, error) {
+func (d *MiniProgramsDAO) Find(name string) (*model.MiniPrograms, error) {
 	var miniPrograms model.MiniPrograms
-	err := d.db.Table(table).Model(&model.MiniPrograms{}).Where("name = ?", name).First(&miniPrograms).Error
+	err := d.db.Table(d.table).Model(&model.MiniPrograms{}).Where("name= ?", name).First(&miniPrograms).Error
 	if err != nil {
 		return nil, err
 	}
 	return &miniPrograms, nil
 }
 
-func (d *MiniProgramsDAO) Save(miniPrograms model.MiniPrograms, table string) error {
-	return d.db.Table(table).Model(&model.MiniPrograms{}).Where("name= ?", miniPrograms.Name).Save(&miniPrograms).Error
+func (d *MiniProgramsDAO) Save(miniPrograms model.MiniPrograms) error {
+	return d.db.Table(d.table).Model(&model.MiniPrograms{}).Where("name= ?", miniPrograms.Name).Save(&miniPrograms).Error
 }

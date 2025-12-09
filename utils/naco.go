@@ -1,11 +1,13 @@
-package tools
+package utils
 
 import (
 	"MiniPrograms/responsity/conf"
 	"bytes"
 	"log"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
@@ -69,22 +71,45 @@ func GetConfigFromNacos(c *conf.Config) error {
 }
 
 func ParseNacosDSN() (server string, port uint64, ns, user, pass, group, dataId string) {
-	//开发环境使用.env文件测试
-	err := gotenv.Load()
-	if err != nil {
-		log.Printf("加载.env文件失败")
-	}
-	server = os.Getenv("SERVER")
-	portInt, err := strconv.Atoi(os.Getenv("PORT"))
-	if err != nil {
-		log.Printf("读取端口号失败")
+	dsn := os.Getenv("NACOSDSN")
+	if dsn == "" {
+		log.Printf("环境变量NACOSDSN未设置")
+
+		//尝试从.env中获取
+		err := gotenv.Load()
+		if err != nil {
+			log.Printf("加载.env文件失败")
+		}
+		dsn = os.Getenv("NACOSDSN")
 	}
 
-	port = uint64(portInt)
-	ns = os.Getenv("NAMESPACE")
-	user = os.Getenv("USERNAME")
-	pass = os.Getenv("PASSWORD")
-	group = os.Getenv("GROUP")
-	dataId = os.Getenv("DATAID")
-	return server, port, ns, user, pass, group, dataId
+	parts := strings.SplitN(dsn, "?", 2)
+	host := parts[0]
+	params := url.Values{}
+
+	if len(parts) == 2 {
+		params, _ = url.ParseQuery(parts[1])
+	}
+
+	hostParts := strings.Split(host, ":")
+	server = hostParts[0]
+
+	if len(hostParts) > 1 {
+		p, _ := strconv.Atoi(hostParts[1])
+		port = uint64(p)
+	} else {
+		port = 8848
+	}
+
+	ns = params.Get("namespace")
+	if ns == "" {
+		ns = "public"
+	}
+
+	user = params.Get("username")
+	pass = params.Get("password")
+	group = params.Get("group")
+	dataId = params.Get("dataId")
+
+	return
 }
